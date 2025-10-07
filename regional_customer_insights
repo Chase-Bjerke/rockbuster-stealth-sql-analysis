@@ -1,0 +1,57 @@
+-- Analyzing Customer Distribution and Top Spenders by Region
+
+-- This module explores customer behavior across countries, cities, and individual spenders.
+
+-- Query 1: Top 10 countries by customer count
+-- Query 2: Top 10 cities within high-priority countries
+-- Query 3: Top 5 customers by total payment in selected cities
+
+-- All queries use INNER JOINs for clean relational mapping and are ordered by relevance.
+-- Designed for clarity, reproducibility, and stakeholder-ready insights.
+
+
+## Query 1 – Top 10 Countries by Customer Count
+SELECT cou.country,
+       COUNT(cust.customer_id) AS customer_count
+FROM customer AS cust
+INNER JOIN address AS add ON cust.address_id = add.address_id
+INNER JOIN city ON add.city_id = city.city_id
+INNER JOIN country AS cou ON city.country_id = cou.country_id
+GROUP BY cou.country
+ORDER BY customer_count DESC
+LIMIT 10;
+
+## Query 2 – Top 10 Cities in High-Priority Countries
+ 
+SELECT city.city,
+       cou.country,
+       COUNT(cust.customer_id) AS customer_count
+FROM customer AS cust
+INNER JOIN address AS add ON cust.address_id = add.address_id
+INNER JOIN city ON add.city_id = city.city_id
+INNER JOIN country AS cou ON city.country_id = cou.country_id
+WHERE cou.country IN ('India', 'China', 'United States', 'Japan', 'Mexico',
+                      'Brazil', 'Russian Federation', 'Philippines',
+                      'Turkey', 'Indonesia')
+GROUP BY cou.country, city.city
+ORDER BY customer_count DESC
+LIMIT 10;
+
+## Query 3 – Top 5 Customers by Spend in Key Cities
+ 
+SELECT cust.customer_id,
+       cust.first_name,
+       cust.last_name,
+       cou.country,
+       city.city,
+       SUM(pay.amount) AS total_payment
+FROM customer AS cust
+INNER JOIN payment AS pay ON cust.customer_id = pay.customer_id
+INNER JOIN address AS add ON cust.address_id = add.address_id
+INNER JOIN city ON add.city_id = city.city_id
+INNER JOIN country AS cou ON city.country_id = cou.country_id
+WHERE city.city IN ('Aurora','Acua','Citrus Heights','Iwaki','Ambattur',
+                    'Shanwei','So Leopoldo','Teboksary','Tianjin','Cianjur')
+GROUP BY cust.customer_id, cust.first_name, cust.last_name, cou.country, city.city
+ORDER BY total_payment DESC
+LIMIT 5;

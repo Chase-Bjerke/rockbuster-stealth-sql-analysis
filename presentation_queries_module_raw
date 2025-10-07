@@ -1,0 +1,88 @@
+-- Presentation Insights Module: Customer, Film, and Behavioral Metrics
+
+-- This module contains SQL queries used in presentation analysis, grouped by theme:
+
+-- Section 1: Customer Geography & Spend
+-- Section 2: Film Revenue & Popularity
+-- Section 3: Behavioral Aggregates & Modal Values
+
+-- All queries use INNER JOINs and aggregation functions to surface stakeholder-relevant insights.
+
+
+## Section 1: Customer Geography & Spend
+
+### Top 10 countries by distinct customer count and total payment
+SELECT country,
+       COUNT(DISTINCT A.customer_id) AS customer_count,
+       SUM(amount) AS total_payment
+FROM customer A
+INNER JOIN address B ON A.address_id = B.address_id
+INNER JOIN city C ON B.city_id = C.city_id
+INNER JOIN country D ON C.country_ID = D.country_ID
+INNER JOIN payment E ON A.customer_id = E.customer_id
+GROUP BY country
+ORDER BY customer_count DESC
+LIMIT 10;
+
+### Top 10 individual spenders in selected cities
+SELECT cust.customer_id, cust.first_name, cust.last_name, cou.country, city.city,
+       SUM(pay.amount) AS total_payment
+FROM customer AS cust
+INNER JOIN payment AS pay ON cust.customer_id = pay.customer_id
+INNER JOIN address AS add ON cust.address_id = add.address_id
+INNER JOIN city ON add.city_id = city.city_id
+INNER JOIN country AS cou ON city.country_id = cou.country_id
+WHERE city.city IN ('Aurora','Acua','Citrus Heights','Iwaki','Ambattur',
+                    'Shanwei','So Leopoldo','Teboksary','Tianjin','Cianjur')
+GROUP BY cust.customer_id, cust.first_name, cust.last_name, cou.country, city.city
+ORDER BY total_payment DESC
+LIMIT 10;
+
+## Section 2: Film Revenue & Popularity
+
+### Top films by total revenue
+SELECT title AS movie_title,
+       SUM(payment.amount) AS total_revenue
+FROM payment
+INNER JOIN rental ON payment.rental_id = rental.rental_id
+INNER JOIN inventory ON rental.inventory_id = inventory.inventory_id
+INNER JOIN film ON inventory.film_id = film.film_id
+GROUP BY film.title
+ORDER BY total_revenue DESC;
+
+### Bottom 10 films by total revenue
+SELECT title AS movie_title,
+       SUM(payment.amount) AS total_revenue
+FROM payment
+INNER JOIN rental ON payment.rental_id = rental.rental_id
+INNER JOIN inventory ON rental.inventory_id = inventory.inventory_id
+INNER JOIN film ON inventory.film_id = film.film_id
+GROUP BY film.title
+ORDER BY total_revenue ASC
+LIMIT 10;
+
+## Section 3: Behavioral Aggregates & Modal Values
+
+### Film length statistics
+SELECT MIN(length) AS min_length,
+       MAX(length) AS max_length,
+       AVG(length) AS avg_length,
+       COUNT(length) AS count_length_values,
+       COUNT(*) AS count_rows
+FROM film;
+
+### Most common MPAA rating
+SELECT MODE() WITHIN GROUP (ORDER BY mpaa_rating) AS modal_value
+FROM film;
+
+### Most common customer update timestamp
+SELECT MODE() WITHIN GROUP (ORDER BY last_update) AS modal_value
+FROM customer;
+
+### Customer activity statistics
+SELECT MIN(active) AS min_active,
+       MAX(active) AS max_active,
+       AVG(active) AS avg_active,
+       COUNT(active) AS count_active_values,
+       COUNT(*) AS count_rows
+FROM customer;

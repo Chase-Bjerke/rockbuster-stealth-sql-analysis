@@ -1,0 +1,77 @@
+-- Customer Loyalty CTE Module (Raw)
+
+-- This module revisits the customer loyalty analysis from Exercise 3.8 using Common Table Expressions (CTEs).
+-- It demonstrates modular query design, performance comparison, and stakeholder-focused metrics.
+
+-- Query 1: Calculate the average payment among top 5 customers using a CTE
+-- Query 2: Compare the top 5 customers against full customer base by country using a CTE
+
+## Query 1: Average Payment Among Top 5 Customers (CTE)
+WITH top_5_customers AS (
+    SELECT AVG(total_amount_paid.total_payment) AS average_amount_paid
+    FROM (
+        SELECT cust.customer_id, 
+               cust.first_name, 
+               cust.last_name, 
+               cou.country, 
+               city.city,
+               SUM(pay.amount) AS total_payment
+        FROM customer AS cust
+        INNER JOIN payment AS pay ON cust.customer_id = pay.customer_id
+        INNER JOIN address AS add ON cust.address_id = add.address_id
+        INNER JOIN city ON add.city_id = city.city_id
+        INNER JOIN country AS cou ON city.country_id = cou.country_id
+        WHERE city.city IN ('Aurora','Acua','Citrus Heights','Iwaki','Ambattur',
+                            'Shanwei','So Leopoldo','Teboksary','Tianjin','Cianjur')
+        GROUP BY cust.customer_id, 
+                 cust.first_name, 
+                 cust.last_name, 
+                 cou.country, 
+                 city.city
+        ORDER BY total_payment DESC
+        LIMIT 5
+    ) AS total_amount_paid
+)
+SELECT average_amount_paid
+FROM top_5_customers;
+
+## Query 2: Country-Level Comparison of Top 5 vs All Customers (CTE)
+WITH top_5_within_countries AS (
+    SELECT cou1.country,
+           COUNT(DISTINCT cust1.customer_id) AS all_customer_count,
+           COUNT(DISTINCT top_5_customers.customer_id) AS top_5_customer_count
+    FROM customer AS cust1
+    INNER JOIN address AS add1 ON cust1.address_id = add1.address_id
+    INNER JOIN city AS city1 ON add1.city_id = city1.city_id
+    INNER JOIN country AS cou1 ON city1.country_id = cou1.country_id
+    LEFT JOIN (
+        SELECT cust.customer_id, 
+               cust.first_name, 
+               cust.last_name, 
+               city.city,
+               cou.country,
+               SUM(pay.amount) AS total_payment
+        FROM customer AS cust
+        INNER JOIN payment AS pay ON cust.customer_id = pay.customer_id
+        INNER JOIN address AS add ON cust.address_id = add.address_id
+        INNER JOIN city ON add.city_id = city.city_id
+        INNER JOIN country AS cou ON city.country_id = cou.country_id
+        WHERE city.city IN ('Aurora','Acua','Citrus Heights','Iwaki','Ambattur',
+                            'Shanwei','So Leopoldo','Teboksary','Tianjin','Cianjur')
+          AND cou.country IN ('India', 'China', 'United States', 'Japan', 'Mexico',
+                              'Brazil', 'Russian Federation', 'Phillippines', 'Turkey', 'Indonesia')
+        GROUP BY cust.customer_id, 
+                 cust.first_name, 
+                 cust.last_name, 
+                 cou.country, 
+                 city.city
+        ORDER BY total_payment DESC
+        LIMIT 5
+    ) AS top_5_customers ON cust1.customer_id = top_5_customers.customer_id
+    GROUP BY cou1.country
+    ORDER BY cou1.country DESC, all_customer_count DESC
+)
+SELECT *
+FROM top_5_within_countries
+ORDER BY top_5_customer_count DESC;
+
